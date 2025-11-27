@@ -2,7 +2,8 @@ import { Request, Response} from "express";
 import bcrypt from 'bcrypt';
 import { deleteUserByIdPg, getUserByEmailPg, getUserByIdPg, insertUserPg } from "../model/database/userDb";
 import { User } from "../model/interfaces/user";
-import { deleteAlbumByIdPg } from "../model/database/albumDb";
+import { getAllUserAlbumsByIdPg, getAllUserAlbumsOnlyMemberByIdPg } from "../model/database/albumDb";
+import { Album } from "../model/interfaces/album";
 
 export const createUser = async (req: Request, res: Response) => {
     const user = req.body;
@@ -39,4 +40,15 @@ export const login = async (req: Request, res: Response) =>{
 
     return res.status(401).json({ message: "Usuario o contraseña incorrecta" });
 }
+export const getAllUserAlbumsById = async (req: Request, res: Response) =>{
+    const userAlbums: Album[] = await getAllUserAlbumsByIdPg(Number(req.params.id));
+    if(!userAlbums) return res.status(500).json({message:"No se han encontrado albumes en el usuario"});
+    return res.status(200).json({userAlbums});
+}
+export const getAllUserAlbumsOnlyMemberById = async (req: Request, res: Response) =>{
+    const userAlbumsOnlyMember = await getAllUserAlbumsOnlyMemberByIdPg(Number(req.params.id));
+    if(!userAlbumsOnlyMember) return res.status(500).json({message:"No se han encontrado albumes en el usuario"});
+    return res.status(200).json({userAlbumsOnlyMember});
+}
+
 
