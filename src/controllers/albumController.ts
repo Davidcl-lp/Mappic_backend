@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addAlbumMemberByIdPg, createAlbumPg, deleteAlbumByIdPg, deleteAlbumMemberByAlbumIdAndUserIdPg, getAlbumByIdPg, getAllAlbumMembersByAlbumIdPg } from "../model/database/albumDb"
+import { addAlbumMemberByIdPg, createAlbumPg, deleteAlbumByIdPg, deleteAlbumMemberByAlbumIdAndUserIdPg, getAlbumByIdPg, getAllAlbumMembersByAlbumIdPg, updateAlbumPg } from "../model/database/albumDb"
 import { Album } from "../model/interfaces/album";
 
 export const createAlbum = async(req: Request, res: Response) => {
@@ -26,6 +26,27 @@ export const deleteAlbumById = async (req: Request, res: Response) => {
     if(!album) return res.status(500).json({message: "El album no se pudo eliminar"});
     return res.status(200).json({album});
 }
+export const updateAlbum = async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+
+    const albumFeatures = req.body;
+
+    const updatedAlbum = await updateAlbumPg(id, {
+        title: albumFeatures.title,
+        description: albumFeatures.description,
+        locationName: albumFeatures.location_name,
+        latitude: albumFeatures.latitude,
+        longitude: albumFeatures.longitude,
+        isGlobal: albumFeatures.is_global
+    });
+
+    if (!updatedAlbum) {
+        return res.status(500).json({ message: "No se pudo actualizar el álbum" });
+    }
+
+    return res.status(200).json(updatedAlbum);
+};
+
 export const addAlbumMember = async(req: Request, res: Response) => {
     const albumMemberFeatures = req.body;
     const result = await addAlbumMemberByIdPg({

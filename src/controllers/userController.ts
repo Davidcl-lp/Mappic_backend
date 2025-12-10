@@ -43,7 +43,7 @@ export const login = async (req: Request, res: Response) =>{
 export const getAllUserAlbumsById = async (req: Request, res: Response) =>{
     const userAlbums: Album[] = await getAllUserAlbumsByIdPg(Number(req.params.id));
     if(!userAlbums) return res.status(500).json({message:"No se han encontrado albumes en el usuario"});
-    return res.status(200).json({userAlbums});
+    return res.status(200).json(userAlbums);
 }
 export const getAllUserAlbumsOnlyMemberById = async (req: Request, res: Response) =>{
     const userAlbumsOnlyMember = await getAllUserAlbumsOnlyMemberByIdPg(Number(req.params.id));

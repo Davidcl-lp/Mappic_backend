@@ -27,9 +27,46 @@ export const deleteAlbumByIdPg = async (id: number) =>
         const result = await pool.query<Album>(`DELETE FROM albums WHERE id = $1 RETURNING *`, [id]);
         return result.rows[0] || null;
     }
+export const updateAlbumPg = async (
+    id: number,
+    data: {
+        title?: string;
+        description?: string;
+        locationName?: string;
+        latitude?: number;
+        longitude?: number;
+        isGlobal?: boolean;
+     }
+) => {
+    const result = await pool.query(
+        `UPDATE albums
+         SET 
+            title = COALESCE($1, title),
+            description = COALESCE($2, description),
+            location_name = COALESCE($3, location_name),
+            latitude = COALESCE($4, latitude),
+            longitude = COALESCE($5, longitude),
+            is_global = COALESCE($6, is_global),
+            updated_at = NOW()
+         WHERE id = $7
+         RETURNING *`,
+        [
+            data.title,
+            data.description,
+            data.locationName,
+            data.latitude,
+            data.longitude,
+            data.isGlobal,
+            id
+        ]
+    );
+
+    return result.rows[0] || null;
+};
+
 export const getAllUserAlbumsByIdPg = async (id:number) => {
-        const result = await pool.query<Album[]>(`SELECT * FROM albums WHERE owner_id = $1`, [id]);
-        return result.rows[0] || null;
+        const result = await pool.query<Album>(`SELECT * FROM albums WHERE owner_id = $1`, [id]);
+        return result.rows || null;
 }
 
 
