@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "sourceMap": true               
+    "sourceMap": true              
   },
   "include": ["src/**/*"],                
   "exclude": ["node_modules", "dist"]      
