@@ -30,7 +30,7 @@ export const removePhoto = async (req: Request, res: Response) => {
 export const listPhotosByAlbum = async (req: Request, res: Response) => {
     const photos: Photo[] = await getPhotosByAlbumId(Number(req.params.albumId));
     if (!photos || photos.length === 0) return res.status(404).json({ message: "No se encontraron fotos en el álbum" });
-    return res.status(200).json({ photos });
+    return res.status(200).json(photos);
 };
 
 // Obtener foto por ID
@@ -41,48 +41,56 @@ export const getPhotoById = async (req: Request, res: Response) => {
     return res.status(200).json({ photo: result });
 };
 
-export const uploadPhotoFile = async (req: Request, res: Response): Promise<void> => {
+export const uploadPhotoFiles = async (req: Request, res: Response) => {
   try {
-    // Validar que venga el archivo
-    if (!req.file) {
-      res.status(400).json({ message: "Falta el archivo 'image'" });
+    const files = (req as any).files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      res.status(400).json({ message: "No se enviaron imágenes" });
       return;
     }
 
-    // Datos adicionales del body
     const albumId = Number(req.body.album_id);
     const uploaderId = Number(req.body.uploader_id);
     const description = req.body.description || null;
 
-    // Configuración de bucket y nombre de archivo
     const bucket = process.env.SUPABASE_BUCKET!;
-    const ext = path.extname(req.file.originalname) || ".jpg";
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const filePath = `albums/${albumId || "default"}/${fileName}`;
+    const uploadedPhotos = [];
 
-    // Subir a Supabase Storage
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+    for (const file of files) {
+      const ext = path.extname(file.originalname) || ".jpg";
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}${ext}`;
 
-    if (error) {
-      res.status(500).json({ message: "Error al subir imagen", error: error.message });
-      return;
+      const filePath = `albums/${albumId}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+        });
+
+      if (error) continue;
+
+      const publicUrl =
+        supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
+
+      const photo = await addPhoto({
+        albumId,
+        uploaderId,
+        url: publicUrl,
+        description,
+      });
+
+      if (photo) uploadedPhotos.push(photo);
     }
 
-    // Obtener URL pública
-    const publicUrl = supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
-
-    // Guardar en BD
-    const photo = await addPhoto({
-      albumId,
-      uploaderId,
-      url: publicUrl,
-      description: description || undefined,
+    res.status(200).json({
+      message: "Fotos subidas correctamente",
+      photos: uploadedPhotos,
     });
-
-    res.status(200).json({ message: "Foto subida correctamente", photo });
   } catch (e: any) {
-    res.status(500).json({ message: "Error interno", error: e?.message });
+    res.status(500).json({ message: "Error interno", error: e.message });
   }
 };
