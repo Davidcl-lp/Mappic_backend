@@ -16,14 +16,16 @@ export const insertUserPg = async ({
 };
 export const getUserByIdPg = async (id: number) =>
     {
-        const result = await pool.query<User>(`SELECT * FROM users WHERE id = $1`, [id]);
-        return result.rows[0] || null;
+    const query = 'SELECT * FROM users WHERE id = $1';
+    const result = await pool.query(query, [id]); 
+    return result.rows[0];
 
     }
 export const getUserByEmailPg = async (email: string) =>
     {
-        const result = await pool.query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
-        return result.rows[0] || null;
+        const query = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1';
+    const result = await pool.query(query, [email]);
+    return result.rows[0];
 
     }
 

@@ -102,8 +102,13 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const getUserById = async (req: Request, res: Response) => {
+  const idStr = req.params.id; 
+  const id = parseInt(idStr);
+  if (isNaN(id)) {
+    return res.status(400).json({ message: "El ID proporcionado no es un número válido" });
+  }
   try {
-    const user: User = await getUserByIdPg(Number(req.params.id));
+    const user = await getUserByIdPg(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const { password_hash, ...userWithoutPassword } = user;
@@ -113,6 +118,30 @@ export const getUserById = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+export const getUserByEmail = async (req: Request, res: Response) => {
+    const email = req.params.email ? decodeURIComponent(req.params.email).trim().toLowerCase() : null;
+    console.log("DEBUG: Buscando usuario con email:", email);
+    if (!email) {
+        return res.status(400).json({ message: "Email parameter is required" });
+    }
+
+    try {
+        const user: User | null = await getUserByEmailPg(email); 
+
+        if (!user) {
+          console.log("DEBUG: Usuario no encontrado en la DB para:", email);
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const { password_hash, ...userWithoutPassword } = user;
+        
+        return res.status(200).json(userWithoutPassword);
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ message: "Server error", error: err.message });
+    }
+}
 
 export const deleteUserById = async (req: Request, res: Response) => {
   try {

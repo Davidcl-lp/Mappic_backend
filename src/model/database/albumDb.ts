@@ -70,15 +70,16 @@ export const getAllUserAlbumsByIdPg = async (id:number) => {
 }
 
 
-export const getAllUserAlbumsOnlyMemberByIdPg = async (id:number) => {
-        const result = await pool.query<Album[]>(`
-SELECT a.*
-FROM albums a
-JOIN album_members am ON a.id = am.album_id
-WHERE am.user_id = $1
-  AND a.owner_id <> $1;`, [id]);
-        return result.rows[0] || null;
+export const getAllUserAlbumsOnlyMemberByIdPg = async (id: number) => {
+    const result = await pool.query<Album>(`
+        SELECT a.*
+        FROM albums a
+        JOIN album_members am ON a.id = am.album_id
+        WHERE am.user_id = $1
+          AND a.owner_id <> $1;`, [id]);
+    return result.rows;
 }
+
 export const addAlbumMemberByIdPg = async ({albumId, userId, role}: {albumId: number, userId: number, role: string}) => {
         const result = await pool.query(
              `INSERT INTO album_members
@@ -89,11 +90,14 @@ export const addAlbumMemberByIdPg = async ({albumId, userId, role}: {albumId: nu
             , [albumId, userId, role]);
         return result.rows[0] || null;
 }
-export const getAllAlbumMembersByAlbumIdPg = async (id: number) =>
-    {
-        const result = await pool.query(`SELECT * FROM album_members WHERE album_id = $1`, [id]);
-        return result.rows || null;
-    }
+export const getAllAlbumMembersByAlbumIdPg = async (id: number) => {
+    const result = await pool.query(`
+        SELECT am.*, u.name, u.email, u.profile_picture_url 
+        FROM album_members am
+        JOIN users u ON am.user_id = u.id
+        WHERE am.album_id = $1`, [id]);
+    return result.rows; 
+}
 export const deleteAlbumMemberByAlbumIdAndUserIdPg = async ({albumId, userId}: {albumId: number, userId: number}) =>
     {
         const result = await pool.query(`DELETE FROM album_members WHERE album_id = $1 AND user_id = $2 RETURNING *`, [albumId, userId]);
