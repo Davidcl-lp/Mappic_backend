@@ -81,23 +81,31 @@ export const getAllUserAlbumsOnlyMemberByIdPg = async (id: number) => {
 }
 
 export const addAlbumMemberByIdPg = async ({albumId, userId, role}: {albumId: number, userId: number, role: string}) => {
-        const result = await pool.query(
-             `INSERT INTO album_members
-             (album_id, user_id, role)
-              VALUES ($1, $2, $3)
-              RETURNING *;
-  `
-            , [albumId, userId, role]);
-        return result.rows[0] || null;
+    const result = await pool.query(
+        `INSERT INTO album_members (album_id, user_id, role)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (album_id, user_id) 
+         DO UPDATE SET role = EXCLUDED.role -- Si ya existe, actualiza el rol
+         RETURNING *;`, 
+        [albumId, userId, role]
+    );
+    return result.rows[0] || null;
 }
-export const getAllAlbumMembersByAlbumIdPg = async (id: number) => {
-    const result = await pool.query(`
-        SELECT am.*, u.name, u.email, u.profile_picture_url 
+
+export const getAllAlbumMembersByAlbumIdPg = async (albumId: number) => {
+    const result = await pool.query(
+        `
+        SELECT u.id, u.name, u.email, u.profile_picture_url
         FROM album_members am
-        JOIN users u ON am.user_id = u.id
-        WHERE am.album_id = $1`, [id]);
-    return result.rows; 
-}
+        JOIN users u ON u.id = am.user_id
+        WHERE am.album_id = $1
+        `,
+        [albumId]
+    );
+
+    return result.rows;
+};
+
 export const deleteAlbumMemberByAlbumIdAndUserIdPg = async ({albumId, userId}: {albumId: number, userId: number}) =>
     {
         const result = await pool.query(`DELETE FROM album_members WHERE album_id = $1 AND user_id = $2 RETURNING *`, [albumId, userId]);

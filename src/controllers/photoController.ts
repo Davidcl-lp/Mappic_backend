@@ -3,6 +3,7 @@ import { addPhoto, deletePhotoById, getPhotosByAlbumId, getPhotoByIdPg } from ".
 import { Photo } from "../model/interfaces/photo";
 import { supabase } from "../supabase";
 import path from "path";
+import { pool } from "../model/database/db";
 
 interface MulterRequest extends Request {
   file: Express.Multer.File;
@@ -26,12 +27,11 @@ export const removePhoto = async (req: Request, res: Response) => {
     return res.status(200).json({ message: "La foto se eliminó correctamente", photo });
 };
 
-// Obtener todas las fotos de un álbum
 export const listPhotosByAlbum = async (req: Request, res: Response) => {
     const photos: Photo[] = await getPhotosByAlbumId(Number(req.params.albumId));
-    if (!photos || photos.length === 0) return res.status(404).json({ message: "No se encontraron fotos en el álbum" });
-    return res.status(200).json(photos);
+    return res.status(200).json(photos ?? []);
 };
+
 
 // Obtener foto por ID
 export const getPhotoById = async (req: Request, res: Response) => {
@@ -44,7 +44,6 @@ export const getPhotoById = async (req: Request, res: Response) => {
 export const uploadPhotoFiles = async (req: Request, res: Response) => {
   try {
     const files = (req as any).files as Express.Multer.File[];
-
     if (!files || files.length === 0) {
       return res.status(400).json({ message: "No se enviaron imágenes" });
     }
@@ -53,18 +52,30 @@ export const uploadPhotoFiles = async (req: Request, res: Response) => {
     const uploaderId = Number(req.body.uploader_id);
     const description = req.body.description || null;
 
-    if (isNaN(albumId) || isNaN(uploaderId) || uploaderId <= 0) {
-      console.error("IDs inválidos recibidos:", { albumId, uploaderId });
-      return res.status(400).json({ 
-        message: "ID de álbum o de usuario inválido. Asegúrese de estar logueado." 
-      });
+    // --- BLOQUE DE SEGURIDAD Y PERMISOS ---
+    
+    // 1. Verificar si es el dueño del álbum
+    const albumRes = await pool.query("SELECT owner_id FROM albums WHERE id = $1", [albumId]);
+    const isOwner = albumRes.rows[0]?.owner_id === uploaderId;
+
+    if (!isOwner) {
+      // 2. Si no es dueño, verificar si es editor en album_members
+      const memberRes = await pool.query(
+        "SELECT role FROM album_members WHERE album_id = $1 AND user_id = $2",
+        [albumId, uploaderId]
+      );
+      
+      const role = memberRes.rows[0]?.role;
+
+      if (!role || role === 'viewer') {
+        return res.status(403).json({ 
+          message: "No tienes permisos de edición en este álbum." 
+        });
+      }
     }
+    // ---------------------------------------
 
     const bucket = process.env.SUPABASE_BUCKET;
-    if (!bucket) {
-      throw new Error("SUPABASE_BUCKET no está definido en el entorno");
-    }
-
     const uploadedPhotos = [];
 
     for (const file of files) {
@@ -74,49 +85,29 @@ export const uploadPhotoFiles = async (req: Request, res: Response) => {
         const filePath = `albums/${albumId}/${fileName}`;
 
         const { error: storageError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-          });
+          .from(bucket!)
+          .upload(filePath, file.buffer, { contentType: file.mimetype });
 
-        if (storageError) {
-          console.error("Error subiendo a Supabase:", storageError.message);
-          continue; 
-        }
+        if (storageError) continue;
 
-        const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-        const publicUrl = data.publicUrl;
-
+        const { data } = supabase.storage.from(bucket!).getPublicUrl(filePath);
+        
         const photo = await addPhoto({
           albumId,
           uploaderId,
-          url: publicUrl,
+          url: data.publicUrl,
           description,
         });
 
-        if (photo) {
-          uploadedPhotos.push(photo);
-        }
+        if (photo) uploadedPhotos.push(photo);
       } catch (fileError) {
-        console.error("Error procesando un archivo individual:", fileError);
+        console.error("Error en archivo:", fileError);
       }
     }
 
-    if (uploadedPhotos.length === 0) {
-      return res.status(500).json({ message: "No se pudo guardar ninguna foto en la base de datos" });
-    }
-
-    return res.status(200).json({
-      message: "Fotos subidas correctamente",
-      photos: uploadedPhotos,
-    });
+    return res.json(uploadedPhotos);
 
   } catch (e: any) {
-    console.error("Error crítico en uploadPhotoFiles:", e);
-    return res.status(500).json({ 
-      message: "Error interno del servidor", 
-      error: e.message 
-    });
+    return res.status(500).json({ message: "Error", error: e.message });
   }
 };

@@ -6,11 +6,6 @@ albumRouter.post('/album', createAlbum);
 albumRouter.get('/album/:id', getAlbumById);
 albumRouter.delete('/album/:id', deleteAlbumById);
 albumRouter.put('/album/:id', updateAlbum);
-
-
 albumRouter.post('/album/member', addAlbumMember);
 albumRouter.get('/album/member/:id', getAllAlbumMembersByAlbumId);
 albumRouter.delete('/album/member/:id',deleteAlbumMemberByAlbumIdAndUserId);
-
-
-
