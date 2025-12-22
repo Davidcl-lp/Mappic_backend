@@ -9,9 +9,9 @@ export const createAlbum = async(req: Request, res: Response) => {
         title: albumFeatures.title,
         description: albumFeatures.description,
         ownerId : albumFeatures.owner_id,
-        locationName : albumFeatures.location_name,
-        latitude : albumFeatures.latitude,
-        longitude : albumFeatures.longitude,
+        latitude : albumFeatures.latitude || null,
+        longitude : albumFeatures.longitude || null,
+        locationName : albumFeatures.location_name || null,
         isGlobal : albumFeatures.is_global
     });
     if(!result) return res.status(500).json({message: "El album no se pudo crear"});
@@ -87,20 +87,20 @@ export const getAllAlbumMembersByAlbumId = async (req: Request, res: Response) =
 export const deleteAlbumMemberByAlbumIdAndUserId = async (req: Request, res: Response) => {
     try {
         const albumId = Number(req.params.id);
-        const userId = Number(req.body.userId);
+        const userIdToRemove = Number(req.body.userId);
+        const requesterId = Number(req.body.requesterId); // Enviado desde la App
 
-        if (isNaN(albumId) || isNaN(userId)) {
-            return res.status(400).json({ message: "ID de álbum o usuario inválido" });
+        // 1. Obtener todos los miembros para ver el rol del solicitante
+        const members = await getAllAlbumMembersByAlbumIdPg(albumId);
+        const requester = members.find(m => m.id === requesterId);
+
+        if (!requester || (requester.role !== 'owner' && requester.role !== 'editor')) {
+            return res.status(403).json({ message: "No tienes permiso para gestionar miembros" });
         }
 
-        const result = await deleteAlbumMemberByAlbumIdAndUserIdPg({ albumId, userId });
-        
-        if(!result) {
-            return res.status(404).json({ message: "No se encontró el miembro para eliminar" });
-        }
-
-        return res.status(200).json({ message: "Miembro eliminado", data: result });
+        const result = await deleteAlbumMemberByAlbumIdAndUserIdPg({ albumId, userId: userIdToRemove });
+        // ... resto del código
     } catch (error) {
-        return res.status(500).json({ message: "Error interno al eliminar miembro" });
+        return res.status(500).json({ message: "Error interno" });
     }
 }

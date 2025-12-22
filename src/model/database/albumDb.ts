@@ -95,14 +95,13 @@ export const addAlbumMemberByIdPg = async ({albumId, userId, role}: {albumId: nu
 export const getAllAlbumMembersByAlbumIdPg = async (albumId: number) => {
     const result = await pool.query(
         `
-        SELECT u.id, u.name, u.email, u.profile_picture_url
+        SELECT u.id, u.name, u.email, u.profile_picture_url, am.role -- <--- AÑADIR am.role AQUÍ
         FROM album_members am
         JOIN users u ON u.id = am.user_id
         WHERE am.album_id = $1
         `,
         [albumId]
     );
-
     return result.rows;
 };
 
