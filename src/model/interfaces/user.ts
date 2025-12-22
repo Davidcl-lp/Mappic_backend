@@ -5,4 +5,5 @@ export interface User {
     password_hash: string,
     profile_picture_url: string,
     created_at: Date,
+    updated_at: Date
 }
