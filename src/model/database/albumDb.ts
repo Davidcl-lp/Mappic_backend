@@ -1,6 +1,5 @@
 import { pool } from "./db";
 import { Album } from "../interfaces/album";
-import { User } from "../interfaces/user";
 
 export const createAlbumPg = async({title, description, ownerId, locationName, latitude, longitude, isGlobal}: {title:string, description:string, ownerId:number, locationName:string, latitude:number, longitude:number, isGlobal:boolean}) => {
     const result = await pool.query<Album>(`
