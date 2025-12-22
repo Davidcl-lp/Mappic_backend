@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import { addAlbumMemberByIdPg, createAlbumPg, deleteAlbumByIdPg, deleteAlbumMemberByAlbumIdAndUserIdPg, getAlbumByIdPg, getAllAlbumMembersByAlbumIdPg, updateAlbumPg } from "../model/database/albumDb"
 import { Album } from "../model/interfaces/album";
+import { getUserByIdPg } from "../model/database/userDb";
 
 export const createAlbum = async(req: Request, res: Response) => {
     const albumFeatures = req.body;
@@ -48,24 +49,59 @@ export const updateAlbum = async (req: Request, res: Response) => {
     return res.status(200).json(updatedAlbum);
 };
 
-export const addAlbumMember = async(req: Request, res: Response) => {
-    const albumMemberFeatures = req.body;
-    const result = await addAlbumMemberByIdPg({
-        albumId: albumMemberFeatures.album_id,
-        userId : albumMemberFeatures.user_id,
-        role: albumMemberFeatures.role
-    });
-    if(!result) return res.status(500).json({message: "No se pudo añadir miembro al album"});
-    return res.status(200).json({message:"Se ha añadido el miembro al album correctamente"});
-}
+export const addAlbumMember = async (req: Request, res: Response) => {
+    try {
+        const { album_id, user_id, role } = req.body;
+
+        const member = await addAlbumMemberByIdPg({
+            albumId: album_id,
+            userId: user_id,
+            role
+        });
+
+        if (!member) {
+            return res.status(500).json({ message: "No se pudo añadir miembro al álbum" });
+        }
+
+        const user = await getUserByIdPg(user_id);
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        const { password_hash, ...userWithoutPassword } = user;
+
+        return res.status(200).json(userWithoutPassword);
+
+    } catch (error) {
+        console.error("ERROR ADD MEMBER:", error);
+        return res.status(500).json({ message: "Error interno del servidor" });
+    }
+};
+
+
 export const getAllAlbumMembersByAlbumId = async (req: Request, res: Response) => {
     const albumMembers = await getAllAlbumMembersByAlbumIdPg(Number(req.params.id));
-    if(!albumMembers) return res.status(500).json({message: "No se pudo obtener el miembro del album"});
-    return res.status(200).json({albumMembers});
+    return res.status(200).json(albumMembers); 
 }
+
 export const deleteAlbumMemberByAlbumIdAndUserId = async (req: Request, res: Response) => {
-    console.log(Number(req.body.userId))
-    const album = await deleteAlbumMemberByAlbumIdAndUserIdPg({albumId: Number(req.params.id), userId : Number(req.body.userId)});
-    if(!album) return res.status(500).json({message: "no se pudo eliminar el miembro del album"});
-    return res.status(200).json({album});
+    try {
+        const albumId = Number(req.params.id);
+        const userId = Number(req.body.userId);
+
+        if (isNaN(albumId) || isNaN(userId)) {
+            return res.status(400).json({ message: "ID de álbum o usuario inválido" });
+        }
+
+        const result = await deleteAlbumMemberByAlbumIdAndUserIdPg({ albumId, userId });
+        
+        if(!result) {
+            return res.status(404).json({ message: "No se encontró el miembro para eliminar" });
+        }
+
+        return res.status(200).json({ message: "Miembro eliminado", data: result });
+    } catch (error) {
+        return res.status(500).json({ message: "Error interno al eliminar miembro" });
+    }
 }

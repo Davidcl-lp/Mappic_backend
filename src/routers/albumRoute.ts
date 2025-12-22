@@ -9,6 +9,3 @@ albumRouter.put('/album/:id', updateAlbum);
 albumRouter.post('/album/member', addAlbumMember);
 albumRouter.get('/album/member/:id', getAllAlbumMembersByAlbumId);
 albumRouter.delete('/album/member/:id',deleteAlbumMemberByAlbumIdAndUserId);
-
-
-
