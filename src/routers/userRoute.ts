@@ -5,7 +5,7 @@ export const userRouter: Router = Router();
 userRouter.post('/user/signup', createUser);
 userRouter.post('/user/login', login);
 userRouter.get('/user/:id', getUserById);
+userRouter.delete("/user", deleteUser);
 userRouter.get('/user/albums/:id', getAllUserAlbumsById);
 userRouter.get('/user/albums/member/:id', getAllUserAlbumsOnlyMemberById);
-userRouter.delete("/user", deleteUser);
 

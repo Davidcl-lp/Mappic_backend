@@ -21,6 +21,7 @@ export const getAlbumById = async (req: Request, res: Response) => {
     if(!album) return res.status(500).json({message: "No se pudo obtener el album"});
     return res.status(200).json({album});
 }
+
 export const deleteAlbumById = async (req: Request, res: Response) => {
     const album: Album = await deleteAlbumByIdPg(Number(req.params.id));
     if(!album) return res.status(500).json({message: "El album no se pudo eliminar"});

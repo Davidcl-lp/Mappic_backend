@@ -50,7 +50,6 @@ export const createUser = async (req: Request, res: Response) => {
     const token = jwt.sign({ id: result.id, email: result.email }, JWT_SECRET, {
       expiresIn: "1h",
     });
-
     return res.status(200).json({
       token,
       user: {
